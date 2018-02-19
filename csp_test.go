@@ -14,7 +14,7 @@ type testf struct {
 }
 
 func TestCSP(t *testing.T) {
-	defaultCSP := "Content-Security-Policy connect-src 'self'; default-src 'none'; img-src 'self'; script-src 'self'; style-src 'self';"
+	defaultCSP := "connect-src 'self'; default-src 'none'; img-src 'self'; script-src 'self'; style-src 'self';"
 
 	t.Run("Marshal CSP", func(t *testing.T) {
 		csp := Default()

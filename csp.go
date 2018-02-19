@@ -60,7 +60,7 @@ func Default() CSP {
 
 // MarshalText marshals a CSP policy to text
 func (c *CSP) MarshalText() ([]byte, error) {
-	policy := HeaderPolicy
+	policy := ""
 
 	v := reflect.ValueOf(*c)
 	t := reflect.TypeOf(*c)
@@ -91,7 +91,7 @@ func (c *CSP) MarshalText() ([]byte, error) {
 		}
 	}
 
-	return []byte(policy), nil
+	return []byte(strings.TrimSpace(policy)), nil
 }
 
 // UnmarshalText un-marshals a CSP policy from text
@@ -102,7 +102,7 @@ func (c *CSP) UnmarshalText(text []byte) error {
 	policyMap := make(map[string]string)
 	for _, p := range policies {
 		l := strings.SplitN(strings.TrimSpace(p), " ", 2)
-		if len(l) != 2 {
+		if p == "" || len(l) != 2 {
 			continue
 		}
 		policyMap[l[0]] = l[1]
@@ -126,12 +126,16 @@ func (c *CSP) UnmarshalText(text []byte) error {
 
 		if field.Type == reflect.ValueOf(SourceList{}).Type() {
 			sl := SourceList{}
-			err := sl.UnmarshalText([]byte(sources))
+			unmarshaler, ok := val.Addr().Interface().(encoding.TextUnmarshaler)
+			if !ok {
+				return fmt.Errorf("field %s of type %s does not implement encoding.TextMarshaler", field.Name, field.Type)
+			}
+			err := unmarshaler.UnmarshalText([]byte(sources))
 			if err != nil {
 				return err
 			}
-			fmt.Printf("Field: %s sources: '%s' sl: %+v\n", field.Name, sources, sl)
-			val.Set(reflect.ValueOf(sl))
+			fmt.Printf("Field: %s sources: '%s' sl: %+v c: %+v\n", field.Name, sources, sl, c)
+			v.Elem().Field(i).Set(val)
 		} else if field.Type == reflect.ValueOf("").Type() {
 			val.SetString(sources)
 		}
