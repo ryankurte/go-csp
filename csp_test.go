@@ -1,7 +1,10 @@
 package csp
 
 import (
+	"bytes"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -9,7 +12,25 @@ import (
 )
 
 const cspString = "default-src 'none'; connect-src 'self'; img-src 'self'; script-src 'self'; style-src 'self'"
+const reportString = ` {
+	"csp-report": {
+	  "document-uri": "http://example.com/signup.html",
+	  "referrer": "",
+	  "blocked-uri": "http://example.com/css/style.css",
+	  "violated-directive": "style-src cdn.example.com",
+	  "original-policy": "default-src 'none'; style-src cdn.example.com; report-uri /_/csp-reports",
+	  "disposition": "report"
+	}
+}`
 
+type MockReporter struct {
+	r Report
+}
+
+func (mr *MockReporter) Report(r Report) error {
+	mr.r = r
+	return nil
+}
 func TestCSP(t *testing.T) {
 
 	t.Run("Marshal CSP", func(t *testing.T) {
@@ -77,6 +98,27 @@ func TestCSP(t *testing.T) {
 			assert.EqualValues(t, v.csp, csp2)
 		})
 	}
+
+	t.Run("Unmarshal reports", func(t *testing.T) {
+		req := httptest.NewRequest("POST", "/", bytes.NewReader([]byte(reportString)))
+		req.Header.Set("Content-Type", ReportContentType)
+		rw := httptest.NewRecorder()
+
+		mr := MockReporter{}
+		h := RouteHandler(&mr)
+
+		rep := Report{
+			DocumentURI:       "http://example.com/signup.html",
+			BlockedURI:        "http://example.com/css/style.css",
+			ViolatedDirective: "style-src cdn.example.com",
+			OriginalPolicy:    "default-src 'none'; style-src cdn.example.com; report-uri /_/csp-reports",
+			Disposition:       "report",
+		}
+
+		h(rw, req)
+		assert.Equal(t, http.StatusOK, rw.Code)
+		assert.Equal(t, rep, mr.r)
+	})
 
 }
 

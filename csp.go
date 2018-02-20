@@ -6,15 +6,6 @@ import (
 	"strings"
 )
 
-// CSP header keys
-const (
-	HeaderPolicy     = "Content-Security-Policy"
-	HeaderReport     = "Content-Security-Policy-Report"
-	HeaderReportOnly = "Content-Security-Policy-Report-Only"
-
-	ReportContentType = "application/csp-report"
-)
-
 // CSP standard source types
 const (
 	SourceNone = "'none'"
@@ -62,18 +53,6 @@ type CSP struct {
 
 	// Reporting
 	ReportTo string
-
-	h http.Handler
-}
-
-// Report CSP report structure
-type Report struct {
-	DocumentURI       string `json:"document-uri"`
-	Referrer          string `json:"referrer"`
-	BlockedURI        string `json:"blocked-uri"`
-	ViolatedDirective string `json:"violated-directive"`
-	OriginalPolicy    string `json:"original-policy"`
-	Disposition       string `json:"disposition"`
 }
 
 // Default generates a default / basic CSP policy with
@@ -88,8 +67,15 @@ func Default() CSP {
 	}
 }
 
+// cspHandler wraps a CSP configuration providing an http.Handler interface
+// and wrapping an underlying handler
+type cspHandler struct {
+	*CSP
+	h http.Handler
+}
+
 // ServeHTTP is an http.Handler instance that attaches CSP headers to all requests
-func (c *CSP) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (c *cspHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	key := HeaderPolicy
 	if c.ReportOnly {
 		key = HeaderReportOnly
@@ -106,9 +92,9 @@ func (c *CSP) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // Handler wraps an http.Handler in a CSP instance
+// All handlers from a given CSP instance will refer to that instance
 func (c *CSP) Handler(h http.Handler) http.Handler {
-	c.h = h
-	return c
+	return &cspHandler{c, h}
 }
 
 // MarshalText marshals a CSP policy to text
