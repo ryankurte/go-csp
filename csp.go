@@ -21,10 +21,27 @@ const (
 	SourceAny  = "*"
 )
 
-const cspTag = "csp"
+// Fetch directives
+// https://www.w3.org/TR/CSP/#directives-fetch
+const (
+	childSrc    = "child-src"
+	connectSrc  = "connect-src"
+	defaultSrc  = "default-src"
+	fontSrc     = "font-src"
+	frameSrc    = "frame-src"
+	imgSrc      = "img-src"
+	manifestSrc = "manifest-src"
+	mediaSrc    = "media-src"
+	objectSrc   = "object-src"
+	scriptSrc   = "script-src"
+	styleSrc    = "style-src"
+	workerSrc   = "worker-src"
+
+	// Reporting
+	reportTo = "report-to"
+)
 
 // CSP Directive Structure
-// https://www.w3.org/TR/CSP/#directives-fetch
 type CSP struct {
 	// Fetch directives
 	ChildSrc    SourceList
@@ -43,25 +60,6 @@ type CSP struct {
 	// Reporting
 	ReportTo string
 }
-
-// Fetch directives
-const (
-	childSrc    = "child-src"
-	connectSrc  = "connect-src"
-	defaultSrc  = "default-src"
-	fontSrc     = "font-src"
-	frameSrc    = "frame-src"
-	imgSrc      = "img-src"
-	manifestSrc = "manifest-src"
-	mediaSrc    = "media-src"
-	objectSrc   = "object-src"
-	scriptSrc   = "script-src"
-	styleSrc    = "style-src"
-	workerSrc   = "worker-src"
-
-	// Reporting
-	reportTo = "report-to"
-)
 
 // Default generates a default / basic CSP policy with
 // a default of 'none' and 'default-src', 'script-src', 'connect-src', 'img-src' and 'style-src' set to 'self'.
