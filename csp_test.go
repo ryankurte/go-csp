@@ -7,26 +7,37 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type testf struct {
-	name string
-	csp  CSP
-	val  string
-}
+const cspString = "default-src 'none'; connect-src 'self'; img-src 'self'; script-src 'self'; style-src 'self'"
 
 func TestCSP(t *testing.T) {
-	defaultCSP := "connect-src 'self'; default-src 'none'; img-src 'self'; script-src 'self'; style-src 'self';"
 
 	t.Run("Marshal CSP", func(t *testing.T) {
 		csp := Default()
 		v, err := csp.MarshalText()
 		require.Nil(t, err)
-		assert.EqualValues(t, defaultCSP, string(v))
+		assert.EqualValues(t, cspString, string(v))
 	})
 
 	t.Run("Unmarshal CSP", func(t *testing.T) {
 		csp := CSP{}
-		err := csp.UnmarshalText([]byte(defaultCSP))
+		err := csp.UnmarshalText([]byte(cspString))
 		require.Nil(t, err)
 		assert.EqualValues(t, Default(), csp)
+	})
+}
+
+func BenchmarkCSP(b *testing.B) {
+	b.Run("Marshal CSP", func(b *testing.B) {
+		csp := Default()
+		for i := 0; i < b.N; i++ {
+			csp.MarshalText()
+		}
+	})
+
+	b.Run("Unmarshal CSP", func(b *testing.B) {
+		csp := CSP{}
+		for i := 0; i < b.N; i++ {
+			csp.UnmarshalText([]byte(cspString))
+		}
 	})
 }

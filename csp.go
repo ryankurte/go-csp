@@ -1,9 +1,7 @@
 package csp
 
 import (
-	"encoding"
 	"fmt"
-	"reflect"
 	"strings"
 )
 
@@ -29,22 +27,41 @@ const cspTag = "csp"
 // https://www.w3.org/TR/CSP/#directives-fetch
 type CSP struct {
 	// Fetch directives
-	ChildSrc    SourceList `csp:"child-src"`
-	ConnectSrc  SourceList `csp:"connect-src"`
-	DefaultSrc  SourceList `csp:"default-src"`
-	FontSrc     SourceList `csp:"font-src"`
-	FrameSrc    SourceList `csp:"frame-src"`
-	ImgSrc      SourceList `csp:"img-src"`
-	ManifestSrc SourceList `csp:"manifest-src"`
-	MediaSrc    SourceList `csp:"media-src"`
-	ObjectSrc   SourceList `csp:"object-src"`
-	ScriptSrc   SourceList `csp:"script-src"`
-	StyleSrc    SourceList `csp:"style-src"`
-	WorkerSrc   SourceList `csp:"worker-src"`
+	ChildSrc    SourceList
+	ConnectSrc  SourceList
+	DefaultSrc  SourceList
+	FontSrc     SourceList
+	FrameSrc    SourceList
+	ImgSrc      SourceList
+	ManifestSrc SourceList
+	MediaSrc    SourceList
+	ObjectSrc   SourceList
+	ScriptSrc   SourceList
+	StyleSrc    SourceList
+	WorkerSrc   SourceList
 
 	// Reporting
-	ReportTo string `csp:"report-to"`
+	ReportTo string
 }
+
+// Fetch directives
+const (
+	childSrc    = "child-src"
+	connectSrc  = "connect-src"
+	defaultSrc  = "default-src"
+	fontSrc     = "font-src"
+	frameSrc    = "frame-src"
+	imgSrc      = "img-src"
+	manifestSrc = "manifest-src"
+	mediaSrc    = "media-src"
+	objectSrc   = "object-src"
+	scriptSrc   = "script-src"
+	styleSrc    = "style-src"
+	workerSrc   = "worker-src"
+
+	// Reporting
+	reportTo = "report-to"
+)
 
 // Default generates a default / basic CSP policy with
 // a default of 'none' and 'default-src', 'script-src', 'connect-src', 'img-src' and 'style-src' set to 'self'.
@@ -60,38 +77,62 @@ func Default() CSP {
 
 // MarshalText marshals a CSP policy to text
 func (c *CSP) MarshalText() ([]byte, error) {
-	policy := ""
+	policies := make([]string, 0)
 
-	v := reflect.ValueOf(*c)
-	t := reflect.TypeOf(*c)
-	for i := 0; i < v.NumField(); i++ {
-		field := t.Field(i)
-		val := v.Field(i)
-		tag := field.Tag.Get(cspTag)
-
-		if val.Type() == reflect.ValueOf(SourceList{}).Type() {
-			if val.Len() == 0 {
-				continue
-			}
-			marshaler, ok := val.Interface().(encoding.TextMarshaler)
-			if !ok {
-				return nil, fmt.Errorf("field %s does not implement encoding.TextMarshaler", field.Name)
-			}
-			v, err := marshaler.MarshalText()
-			if err != nil {
-				return nil, err
-			}
-
-			policy += fmt.Sprintf(" %s %s;", tag, string(v))
-		} else if val.Type() == reflect.ValueOf("").Type() {
-			if val.String() == "" {
-				continue
-			}
-			policy += fmt.Sprintf(" %s %s;", tag, val.String())
-		}
+	if len(c.DefaultSrc) != 0 {
+		txt, _ := c.DefaultSrc.MarshalText()
+		policies = append(policies, fmt.Sprintf("%s %s", defaultSrc, txt))
+	}
+	if len(c.ChildSrc) != 0 {
+		txt, _ := c.ChildSrc.MarshalText()
+		policies = append(policies, fmt.Sprintf("%s %s", childSrc, txt))
+	}
+	if len(c.ConnectSrc) != 0 {
+		txt, _ := c.ConnectSrc.MarshalText()
+		policies = append(policies, fmt.Sprintf("%s %s", connectSrc, txt))
+	}
+	if len(c.FontSrc) != 0 {
+		txt, _ := c.FontSrc.MarshalText()
+		policies = append(policies, fmt.Sprintf("%s %s", fontSrc, txt))
+	}
+	if len(c.FrameSrc) != 0 {
+		txt, _ := c.FrameSrc.MarshalText()
+		policies = append(policies, fmt.Sprintf("%s %s", frameSrc, txt))
+	}
+	if len(c.ImgSrc) != 0 {
+		txt, _ := c.ImgSrc.MarshalText()
+		policies = append(policies, fmt.Sprintf("%s %s", imgSrc, txt))
+	}
+	if len(c.ManifestSrc) != 0 {
+		txt, _ := c.ManifestSrc.MarshalText()
+		policies = append(policies, fmt.Sprintf("%s %s", manifestSrc, txt))
+	}
+	if len(c.MediaSrc) != 0 {
+		txt, _ := c.MediaSrc.MarshalText()
+		policies = append(policies, fmt.Sprintf("%s %s", mediaSrc, txt))
+	}
+	if len(c.ObjectSrc) != 0 {
+		txt, _ := c.ObjectSrc.MarshalText()
+		policies = append(policies, fmt.Sprintf("%s %s", objectSrc, txt))
+	}
+	if len(c.ScriptSrc) != 0 {
+		txt, _ := c.ScriptSrc.MarshalText()
+		policies = append(policies, fmt.Sprintf("%s %s", scriptSrc, txt))
+	}
+	if len(c.StyleSrc) != 0 {
+		txt, _ := c.StyleSrc.MarshalText()
+		policies = append(policies, fmt.Sprintf("%s %s", styleSrc, txt))
+	}
+	if len(c.WorkerSrc) != 0 {
+		txt, _ := c.WorkerSrc.MarshalText()
+		policies = append(policies, fmt.Sprintf("%s %s", workerSrc, txt))
 	}
 
-	return []byte(strings.TrimSpace(policy)), nil
+	if c.ReportTo != "" {
+		policies = append(policies, fmt.Sprintf("%s %s", reportTo, c.ReportTo))
+	}
+
+	return []byte(strings.TrimSpace(strings.Join(policies, "; "))), nil
 }
 
 // UnmarshalText un-marshals a CSP policy from text
@@ -99,49 +140,42 @@ func (c *CSP) UnmarshalText(text []byte) error {
 	policies := strings.Split(string(text), ";")
 
 	// Read polices into a map
-	policyMap := make(map[string]string)
 	for _, p := range policies {
 		l := strings.SplitN(strings.TrimSpace(p), " ", 2)
 		if p == "" || len(l) != 2 {
 			continue
 		}
-		policyMap[l[0]] = l[1]
-	}
+		k, v := strings.TrimSpace(l[0]), strings.TrimSpace(l[1])
 
-	// Reflect map values onto struct
-	v := reflect.ValueOf(c)
-	t := reflect.TypeOf(*c)
-	for i := 0; i < t.NumField(); i++ {
-		field := t.Field(i)
-		val := v.Elem().Field(i)
-
-		tag := field.Tag.Get(cspTag)
-		if tag == "" {
-			continue
-		}
-		sources, ok := policyMap[tag]
-		if !ok {
-			continue
-		}
-
-		if field.Type == reflect.ValueOf(SourceList{}).Type() {
-			sl := SourceList{}
-			unmarshaler, ok := val.Addr().Interface().(encoding.TextUnmarshaler)
-			if !ok {
-				return fmt.Errorf("field %s of type %s does not implement encoding.TextMarshaler", field.Name, field.Type)
-			}
-			err := unmarshaler.UnmarshalText([]byte(sources))
-			if err != nil {
-				return err
-			}
-			fmt.Printf("Field: %s sources: '%s' sl: %+v c: %+v\n", field.Name, sources, sl, c)
-			v.Elem().Field(i).Set(val)
-		} else if field.Type == reflect.ValueOf("").Type() {
-			val.SetString(sources)
+		switch k {
+		case childSrc:
+			c.ChildSrc.UnmarshalText([]byte(v))
+		case connectSrc:
+			c.ConnectSrc.UnmarshalText([]byte(v))
+		case defaultSrc:
+			c.DefaultSrc.UnmarshalText([]byte(v))
+		case fontSrc:
+			c.FontSrc.UnmarshalText([]byte(v))
+		case frameSrc:
+			c.FrameSrc.UnmarshalText([]byte(v))
+		case imgSrc:
+			c.ImgSrc.UnmarshalText([]byte(v))
+		case manifestSrc:
+			c.ManifestSrc.UnmarshalText([]byte(v))
+		case mediaSrc:
+			c.MediaSrc.UnmarshalText([]byte(v))
+		case objectSrc:
+			c.ObjectSrc.UnmarshalText([]byte(v))
+		case scriptSrc:
+			c.ScriptSrc.UnmarshalText([]byte(v))
+		case styleSrc:
+			c.StyleSrc.UnmarshalText([]byte(v))
+		case workerSrc:
+			c.WorkerSrc.UnmarshalText([]byte(v))
+		case reportTo:
+			c.ReportTo = v
 		}
 	}
-
-	v.Elem().Set(reflect.ValueOf(*c))
 
 	return nil
 }
