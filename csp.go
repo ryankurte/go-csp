@@ -2,6 +2,7 @@ package csp
 
 import (
 	"fmt"
+	"net/http"
 	"strings"
 )
 
@@ -41,8 +42,10 @@ const (
 	reportTo = "report-to"
 )
 
-// CSP Directive Structure
+// CSP Configuration Structure
 type CSP struct {
+	ReportOnly bool // ReportOnly sets CSP into report only mode
+
 	// Fetch directives
 	ChildSrc    SourceList
 	ConnectSrc  SourceList
@@ -59,6 +62,18 @@ type CSP struct {
 
 	// Reporting
 	ReportTo string
+
+	h http.Handler
+}
+
+// Report CSP report structure
+type Report struct {
+	DocumentURI       string `json:"document-uri"`
+	Referrer          string `json:"referrer"`
+	BlockedURI        string `json:"blocked-uri"`
+	ViolatedDirective string `json:"violated-directive"`
+	OriginalPolicy    string `json:"original-policy"`
+	Disposition       string `json:"disposition"`
 }
 
 // Default generates a default / basic CSP policy with
@@ -71,6 +86,29 @@ func Default() CSP {
 		ImgSrc:     NewSourceList(SourceSelf),
 		StyleSrc:   NewSourceList(SourceSelf),
 	}
+}
+
+// ServeHTTP is an http.Handler instance that attaches CSP headers to all requests
+func (c *CSP) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	key := HeaderPolicy
+	if c.ReportOnly {
+		key = HeaderReportOnly
+	}
+
+	val, err := c.MarshalText()
+	if err != nil {
+		return
+	}
+
+	w.Header().Set(key, string(val))
+
+	c.h.ServeHTTP(w, r)
+}
+
+// Handler wraps an http.Handler in a CSP instance
+func (c *CSP) Handler(h http.Handler) http.Handler {
+	c.h = h
+	return c
 }
 
 // MarshalText marshals a CSP policy to text
