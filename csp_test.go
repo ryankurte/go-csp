@@ -1,6 +1,7 @@
 package csp
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -24,6 +25,59 @@ func TestCSP(t *testing.T) {
 		require.Nil(t, err)
 		assert.EqualValues(t, Default(), csp)
 	})
+
+	// Mozilla examples from https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP
+	marshalTests := []struct {
+		name string
+		csp  CSP
+		txt  string
+	}{
+		{"Default CSP", Default(), cspString},
+		{"Mozilla example 1",
+			CSP{
+				DefaultSrc: NewSourceList(SourceSelf),
+			},
+			"default-src 'self'",
+		}, {"Mozilla example 2",
+			CSP{
+				DefaultSrc: NewSourceList(SourceSelf, "*.trusted.com"),
+			},
+			"default-src 'self' *.trusted.com",
+		}, {"Mozilla example 3",
+			CSP{
+				DefaultSrc: NewSourceList(SourceSelf),
+				ImgSrc:     NewSourceList(SourceAny),
+				MediaSrc:   NewSourceList("media1.com", "media2.com"),
+				ScriptSrc:  NewSourceList("userscripts.example.com"),
+			},
+			"default-src 'self'; img-src *; media-src media1.com media2.com; script-src userscripts.example.com",
+		}, {"Mozilla example 4",
+			CSP{
+				DefaultSrc: NewSourceList("https://onlinebanking.jumbobank.com"),
+			},
+			"default-src https://onlinebanking.jumbobank.com",
+		}, {"Mozilla example 5",
+			CSP{
+				DefaultSrc: NewSourceList(SourceSelf, "*.mailsite.com"),
+				ImgSrc:     NewSourceList(SourceAny),
+			},
+			"default-src 'self' *.mailsite.com; img-src *",
+		},
+	}
+
+	for _, v := range marshalTests {
+		t.Run(fmt.Sprintf("Marshal Unmarshal %s", v.name), func(t *testing.T) {
+			txt, err := v.csp.MarshalText()
+			require.Nil(t, err)
+			assert.EqualValues(t, v.txt, string(txt))
+
+			csp2 := CSP{}
+			err = csp2.UnmarshalText(txt)
+			require.Nil(t, err)
+			assert.EqualValues(t, v.csp, csp2)
+		})
+	}
+
 }
 
 func BenchmarkCSP(b *testing.B) {
